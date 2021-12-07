@@ -55,6 +55,7 @@ class BingoBoard {
 		this.hasBingo = false;
 		this.score = 0;
 		this.rows = bingoBoard.map((row) => new Row(row));
+		this.bingoAtTurn = 0;
 		let columns = [];
 		for (let i = 0; i < 5; i++) {
 			for (let j = 0; j < 5; j++) {
@@ -65,12 +66,15 @@ class BingoBoard {
 		this.columns = columns.map((column) => new Column(column));
 	}
 
-	drawNumber(number) {
+	drawNumber(number, turn) {
 		[...this.rows, ...this.columns].forEach((rowOrColumn) => rowOrColumn.drawNumber(number));
 
+		let hadBingoBeforeThisTurn = this.hasBingo;
 		this.hasBingo = [...this.rows, ...this.columns].some((rowOrColumn) => rowOrColumn.hasBingo) > 0;
-
-		this.score = [...this.rows.map((row) => row.getScore())].reduce((prev, curr) => prev + curr) * +number;
+		if (hadBingoBeforeThisTurn != this.hasBingo) {
+			this.bingoAtTurn = turn;
+			this.score = [...this.rows.map((row) => row.getScore())].reduce((prev, curr) => prev + curr) * +number;
+		}
 	}
 }
 
@@ -83,23 +87,23 @@ class BingoSystem {
 		this.bingoBoards = bingoBoards;
 	}
 
-	drawNumber(number) {
-		this.bingoBoards.forEach((bingoBoard) => bingoBoard.drawNumber(number));
+	drawNumber(number, turn) {
+		this.bingoBoards.forEach((bingoBoard) => bingoBoard.drawNumber(number, turn));
 	}
 
 	findWinner(drawOrder) {
 		let i = 0;
-		let winner = this.bingoBoards;
-		let finalScore = 0;
+		let winners = this.bingoBoards;
+		let finalScore = [];
 		let number = 0;
-		while (i < drawOrder.length && winner.length != 1) {
+		while (i < drawOrder.length) {
 			number = drawOrder[i];
-			this.drawNumber(number);
-			winner = this.bingoBoards.filter((bingoBoard) => bingoBoard.hasBingo);
+			this.drawNumber(number, i);
+			winners = this.bingoBoards.filter((bingoBoard) => bingoBoard.hasBingo);
 			i++;
 		}
 
-		finalScore = winner?.[0]?.score;
+		finalScore = winners.sort((winnerA, winnerB) => winnerA.bingoAtTurn - winnerB.bingoAtTurn);
 
 		return finalScore;
 	}
@@ -108,5 +112,8 @@ class BingoSystem {
 const bingoSystem = new BingoSystem(input.slice(1));
 
 const finalScore = bingoSystem.findWinner(input[0].split(","));
+const winnerFinalScore = finalScore.slice(0, 1).map((bingoBoard) => bingoBoard.score)?.[0];
+const loserFinalScore = finalScore.slice(-1).map((bingoBoard) => bingoBoard.score)?.[0];
 
-console.log(finalScore);
+console.log(winnerFinalScore);
+console.log(loserFinalScore);
